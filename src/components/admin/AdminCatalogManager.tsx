@@ -235,6 +235,8 @@ export default function AdminCatalogManager({
   const [imgUrl, setImgUrl] = useState('');
   const [imgAlt, setImgAlt] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [colorPhotos, setColorPhotos] = useState<Array<{ url: string; altText?: string }>>([]);
+  const [uploadingForProductColor, setUploadingForProductColor] = useState<string | null>(null);
 
   // Modo do Estúdio Unificado: Criar Novo Modelo Completo OU Adicionar Nova Cor a Modelo Existente
   const [studioMode, setStudioMode] = useState<'NEW_PRODUCT' | 'ADD_COLOR_TO_EXISTING'>(
@@ -304,38 +306,144 @@ export default function AdminCatalogManager({
     router.refresh();
   }
 
-  // Upload direto de arquivo de foto do PC / Celular
+  // Upload direto de arquivo(s) de foto do PC / Celular
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setUploadingPhoto(true);
     setFeedback(null);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const newPhotos: Array<{ url: string; altText?: string }> = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
 
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setFeedback({ type: 'err', text: data.error || 'Falha no upload da foto.' });
-        return;
+        const res = await fetch('/api/admin/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          newPhotos.push({
+            url: data.url,
+            altText: `Foto ${prodName || 'produto'} ${varColorName || ''} ${colorPhotos.length + i + 1}`.trim(),
+          });
+        }
       }
-      setImgUrl(data.url);
-      if (!imgAlt) {
-        setImgAlt(`Foto de estúdio ${prodName || 'modelo'} ${imgColorName || ''}`.trim());
+
+      if (newPhotos.length > 0) {
+        setColorPhotos((prev) => [...prev, ...newPhotos]);
+        setImgUrl(newPhotos[0].url);
+        if (!imgAlt) {
+          setImgAlt(`Foto ${prodName || 'produto'} ${varColorName || ''}`.trim());
+        }
+        setFeedback({
+          type: 'ok',
+          text: `${newPhotos.length} foto(s) enviada(s) com sucesso para esta cor.`,
+        });
       }
-      setFeedback({
-        type: 'ok',
-        text: `Foto enviada com sucesso (${data.url}).`,
-      });
     } catch {
-      setFeedback({ type: 'err', text: 'Erro ao fazer upload da imagem.' });
+      setFeedback({ type: 'err', text: 'Erro ao fazer upload das imagens.' });
     } finally {
       setUploadingPhoto(false);
+      e.target.value = '';
+    }
+  }
+
+  // Upload e vínculo direto de fotos a uma cor de produto já existente
+  async function handleAddPhotosToExistingColor(
+    productId: string,
+    colorName: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const key = `${productId}-${colorName}`;
+    setUploadingForProductColor(key);
+    setFeedback(null);
+
+    try {
+      let countSuccess = 0;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadRes = await fetch('/api/admin/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadRes.ok && uploadData.url) {
+          const imgRes = await fetch('/api/admin/images', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              productId,
+              colorName,
+              modelName: 'Padrão',
+              url: uploadData.url,
+              altText: `Foto ${colorName} ${Date.now()}`,
+              displayOrder: 10 + i,
+              isPrimary: false,
+            }),
+          });
+          if (imgRes.ok) countSuccess++;
+        }
+      }
+
+      setFeedback({
+        type: 'ok',
+        text: `${countSuccess} nova(s) foto(s) adicionada(s) à cor "${colorName}" com sucesso!`,
+      });
+      router.refresh();
+    } catch {
+      setFeedback({ type: 'err', text: 'Falha ao adicionar fotos à cor selecionada.' });
+    } finally {
+      setUploadingForProductColor(null);
+      e.target.value = '';
+    }
+  }
+
+  async function handleDeleteProductImage(imageId: string) {
+    if (!confirm('Deseja excluir esta foto?')) return;
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/admin/images?id=${encodeURIComponent(imageId)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setFeedback({ type: 'ok', text: 'Foto removida com sucesso.' });
+        router.refresh();
+      } else {
+        const data = await res.json();
+        setFeedback({ type: 'err', text: data.error || 'Erro ao remover foto.' });
+      }
+    } catch {
+      setFeedback({ type: 'err', text: 'Erro ao conectar à API de imagens.' });
+    }
+  }
+
+  async function handleSetPrimaryProductImage(imageId: string) {
+    setFeedback(null);
+    try {
+      const res = await fetch('/api/admin/images', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: imageId, isPrimary: true }),
+      });
+      if (res.ok) {
+        setFeedback({ type: 'ok', text: 'Foto definida como principal (capa).' });
+        router.refresh();
+      } else {
+        const data = await res.json();
+        setFeedback({ type: 'err', text: data.error || 'Erro ao definir foto principal.' });
+      }
+    } catch {
+      setFeedback({ type: 'err', text: 'Erro ao conectar à API de imagens.' });
     }
   }
 
@@ -465,6 +573,10 @@ export default function AdminCatalogManager({
           imageAlt:
             imgAlt.trim() ||
             `${prodName || 'Modelo STILLUS ALBAN'} na cor ${colorNameClean}`,
+          images:
+            colorPhotos.length > 0
+              ? colorPhotos.map((p) => ({ url: p.url, altText: p.altText }))
+              : undefined,
         },
       };
 
@@ -513,6 +625,7 @@ export default function AdminCatalogManager({
       setSelectedBatchSizes([]);
       setImgUrl('');
       setImgAlt('');
+      setColorPhotos([]);
       router.refresh();
     } catch {
       setFeedback({ type: 'err', text: 'Erro de comunicação ao salvar o cadastro unificado.' });
@@ -1487,29 +1600,95 @@ export default function AdminCatalogManager({
                           htmlFor="img-file-upload"
                           className="block text-xs text-[#D4AF37] font-semibold"
                         >
-                          📷 Foto desta Cor (Enviar do Aparelho ou URL):
+                          📷 Foto(s) desta Cor (Selecione 1 ou mais do aparelho ou cole URL):
                         </label>
                         <div className="flex items-center gap-2">
                           <input
                             id="img-file-upload"
                             type="file"
                             accept="image/*"
+                            multiple
                             onChange={handleFileUpload}
                             className="w-full text-xs text-[#A8A29E] file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-[#D4AF37] file:text-[#0A0A0A] cursor-pointer"
                           />
                         </div>
-                        <input
-                          id="img-url"
-                          type="text"
-                          value={imgUrl}
-                          onChange={(e) => setImgUrl(e.target.value)}
-                          className="w-full min-h-[34px] rounded border border-[#262626] bg-[#141414] px-2.5 text-xs text-[#A8A29E] mt-1"
-                          placeholder={
-                            uploadingPhoto
-                              ? 'Enviando foto...'
-                              : 'Caminho preenchido no upload (ou cole URL da foto)'
-                          }
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            id="img-url"
+                            type="text"
+                            value={imgUrl}
+                            onChange={(e) => setImgUrl(e.target.value)}
+                            className="w-full min-h-[34px] rounded border border-[#262626] bg-[#141414] px-2.5 text-xs text-[#A8A29E] mt-1"
+                            placeholder={
+                              uploadingPhoto
+                                ? 'Enviando foto...'
+                                : 'Caminho preenchido no upload (ou cole URL da foto)'
+                            }
+                          />
+                          {imgUrl && !colorPhotos.some((p) => p.url === imgUrl) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!imgUrl.trim()) return;
+                                setColorPhotos((prev) => [
+                                  ...prev,
+                                  {
+                                    url: imgUrl.trim(),
+                                    altText: `Foto ${prodName || 'produto'} ${varColorName || ''} ${colorPhotos.length + 1}`.trim(),
+                                  },
+                                ]);
+                                setImgUrl('');
+                              }}
+                              className="mt-1 px-3 py-1 bg-[#262626] hover:bg-[#D4AF37] hover:text-[#0A0A0A] text-xs text-[#F5F5F4] rounded font-semibold transition shrink-0"
+                            >
+                              + Anexar URL
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Miniaturas das fotos anexadas para esta cor */}
+                        {colorPhotos.length > 0 && (
+                          <div className="pt-2">
+                            <span className="text-[11px] text-[#A8A29E] block mb-1.5 font-medium">
+                              {colorPhotos.length} foto(s) anexada(s) para a cor &quot;{varColorName || 'selecionada'}&quot;:
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {colorPhotos.map((photo, pIdx) => (
+                                <div
+                                  key={pIdx}
+                                  className="relative group w-14 h-14 rounded-lg overflow-hidden border border-[#D4AF37]/50 bg-[#141414] shrink-0"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={photo.url}
+                                    alt={photo.altText || ''}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {pIdx === 0 && (
+                                    <span className="absolute bottom-0 inset-x-0 bg-[#D4AF37] text-[#0A0A0A] text-[9px] font-bold text-center leading-none py-0.5">
+                                      Capa
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setColorPhotos((prev) => prev.filter((_, idx) => idx !== pIdx));
+                                      if (pIdx === 0 && colorPhotos[1]) {
+                                        setImgUrl(colorPhotos[1].url);
+                                      } else if (colorPhotos.length === 1) {
+                                        setImgUrl('');
+                                      }
+                                    }}
+                                    className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-600/90 hover:bg-red-600 text-white rounded text-[10px] flex items-center justify-center font-bold"
+                                    title="Remover foto"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1668,7 +1847,18 @@ export default function AdminCatalogManager({
                       gatewayPixFeePercent,
                       gatewayCardFeePercent,
                     });
-                    const coverImg = prod.images[0]?.url || null;
+                    const coverImg =
+                      prod.images.find((i) => i.isPrimary)?.url || prod.images[0]?.url || null;
+                    const distinctColors: string[] = Array.from(
+                      new Set([
+                        ...prod.variants
+                          .map((v) => v.colorName?.trim())
+                          .filter((c): c is string => Boolean(c)),
+                        ...prod.images
+                          .map((img) => img.colorName?.trim())
+                          .filter((c): c is string => Boolean(c)),
+                      ])
+                    );
 
                     return (
                       <div
@@ -1836,6 +2026,109 @@ export default function AdminCatalogManager({
                               })}
                             </div>
                           )}
+                        </div>
+
+                        {/* Galeria de Fotos por Cor com Upload Múltiplo e Definição de Capa */}
+                        <div className="space-y-2 border-t border-[#262626] pt-3">
+                          <span className="text-xs uppercase tracking-wider text-[#D4AF37] font-semibold block">
+                            📸 Fotos por Cor deste Modelo ({prod.images.length} foto(s) no total)
+                          </span>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            {(distinctColors.length > 0 ? distinctColors : ['Padrão']).map((cName) => {
+                              const colorImgs = prod.images.filter(
+                                (img) =>
+                                  (img.colorName || 'Padrão').trim().toLowerCase() ===
+                                  cName.trim().toLowerCase()
+                              );
+                              const isUploading = uploadingForProductColor === `${prod.id}-${cName}`;
+
+                              return (
+                                <div
+                                  key={cName}
+                                  className="rounded border border-[#262626] bg-[#141414] p-2.5 space-y-2"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs font-semibold text-[#F5F5F4] flex items-center gap-1.5">
+                                      Cor: <strong className="text-[#D4AF37]">{cName}</strong>
+                                      <span className="text-[10px] text-[#A8A29E]">
+                                        ({colorImgs.length} foto(s))
+                                      </span>
+                                    </span>
+
+                                    <label
+                                      className={`text-[11px] font-semibold px-2.5 py-1 rounded border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A0A0A] cursor-pointer transition ${
+                                        isUploading ? 'opacity-60 cursor-not-allowed bg-transparent' : 'bg-[#D4AF37]/10'
+                                      }`}
+                                    >
+                                      {isUploading ? 'Enviando...' : '+ Adicionar Fotos'}
+                                      <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*"
+                                        disabled={isUploading}
+                                        className="hidden"
+                                        onChange={(e) =>
+                                          handleAddPhotosToExistingColor(prod.id, cName, e)
+                                        }
+                                      />
+                                    </label>
+                                  </div>
+
+                                  {colorImgs.length === 0 ? (
+                                    <p className="text-[11px] text-[#F59E0B]">
+                                      Nenhuma foto enviada para esta cor. Clique em &quot;+ Adicionar Fotos&quot;.
+                                    </p>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                      {colorImgs.map((img) => (
+                                        <div
+                                          key={img.id}
+                                          className={`relative group w-16 h-16 rounded-lg overflow-hidden border bg-[#0A0A0A] shrink-0 ${
+                                            img.isPrimary
+                                              ? 'border-[#D4AF37] ring-2 ring-[#D4AF37]'
+                                              : 'border-[#262626]'
+                                          }`}
+                                        >
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img
+                                            src={img.url}
+                                            alt={img.altText || ''}
+                                            className="w-full h-full object-cover"
+                                          />
+                                          {img.isPrimary && (
+                                            <span className="absolute top-0 inset-x-0 bg-[#D4AF37] text-[#0A0A0A] text-[8px] font-bold text-center leading-none py-0.5 uppercase">
+                                              Capa
+                                            </span>
+                                          )}
+                                          <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
+                                            {!img.isPrimary && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleSetPrimaryProductImage(img.id)}
+                                                className="text-[9px] bg-[#D4AF37] text-[#0A0A0A] px-1.5 py-0.5 rounded font-bold hover:scale-105"
+                                                title="Definir como foto principal (capa)"
+                                              >
+                                                ⭐ Capa
+                                              </button>
+                                            )}
+                                            <button
+                                              type="button"
+                                              onClick={() => handleDeleteProductImage(img.id)}
+                                              className="text-[9px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold hover:scale-105"
+                                              title="Excluir esta foto"
+                                            >
+                                              ✕ Excluir
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     );

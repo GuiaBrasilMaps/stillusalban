@@ -116,23 +116,46 @@ export async function POST(req: NextRequest) {
         createdVariants.push(variant);
       }
 
-      if (uv.imageUrl && String(uv.imageUrl).trim().length > 0) {
-        attachedImage = await attachVariantImageWithAudit(
+      // Processa uma ou múltiplas imagens vinculadas à cor
+      const imagesToAttach: Array<{ url: string; altText?: string }> = [];
+      if (Array.isArray(uv.images)) {
+        for (const img of uv.images) {
+          if (img && typeof img === 'object' && img.url) {
+            imagesToAttach.push({ url: String(img.url).trim(), altText: img.altText });
+          } else if (typeof img === 'string' && img.trim().length > 0) {
+            imagesToAttach.push({ url: img.trim() });
+          }
+        }
+      }
+      if (uv.imageUrl && !imagesToAttach.some((i) => i.url === String(uv.imageUrl).trim())) {
+        imagesToAttach.unshift({
+          url: String(uv.imageUrl).trim(),
+          altText:
+            uv.imageAlt && String(uv.imageAlt).trim().length >= 3
+              ? String(uv.imageAlt).trim()
+              : `${product.name} na cor ${colorName}`,
+        });
+      }
+
+      for (let i = 0; i < imagesToAttach.length; i++) {
+        const item = imagesToAttach[i];
+        const attached = await attachVariantImageWithAudit(
           {
             productId: product.id,
             colorName,
             modelName,
-            url: String(uv.imageUrl).trim(),
+            url: item.url,
             altText:
-              uv.imageAlt && String(uv.imageAlt).trim().length >= 3
-                ? String(uv.imageAlt).trim()
-                : `${product.name} na cor ${colorName}`,
-            displayOrder: 0,
-            isPrimary: true,
+              item.altText && item.altText.trim().length >= 3
+                ? item.altText.trim()
+                : `${product.name} na cor ${colorName} - Foto ${i + 1}`,
+            displayOrder: i,
+            isPrimary: i === 0,
           },
           session.userId,
           prisma
         );
+        if (!attachedImage) attachedImage = attached;
       }
     }
 
