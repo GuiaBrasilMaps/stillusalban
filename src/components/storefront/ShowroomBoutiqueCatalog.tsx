@@ -280,14 +280,13 @@ export default function ShowroomBoutiqueCatalog({
       <section className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/35 bg-gradient-to-br from-[#191610] via-[#0F0F0F] to-[#080808] px-6 py-8 sm:px-10 sm:py-10 shadow-[0_20px_50px_rgba(0,0,0,0.75)] flex flex-col lg:flex-row lg:items-center justify-between gap-8">
         <div className="space-y-3 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#D4AF37] text-[11px] uppercase tracking-[0.22em] font-semibold">
-            <span>✦ Curadoria Exclusiva • Domingos Martins e Região</span>
+            <span>✦ Coleção Exclusiva • Domingos Martins - ES</span>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-serif text-[#F5F5F4] leading-[1.15] tracking-tight">
-            Showroom Digital <span className="text-[#D4AF37]">STILLUS ALBAN</span>
+            Coleção <span className="text-[#D4AF37]">STILLUS ALBAN</span>
           </h1>
           <p className="text-sm sm:text-base text-[#A8A29E] leading-relaxed">
-            Bolsas estruturadas, calçados sofisticados e acessórios selecionados em pronta entrega
-            e sob encomenda.
+            Bolsas clássicas, calçados elegantes e acessórios selecionados para valorizar o seu estilo em pronta entrega e sob encomenda.
           </p>
         </div>
 
@@ -344,7 +343,7 @@ export default function ShowroomBoutiqueCatalog({
                   : 'border border-[#262626] bg-[#0A0A0A] text-[#F5F5F4] hover:border-[#D4AF37]'
               }`}
             >
-              Todos os Modelos ({products.length})
+              Todos os Produtos ({products.length})
             </button>
 
             {categories.map((cat) => {
@@ -464,35 +463,35 @@ export default function ShowroomBoutiqueCatalog({
 
             <span className="text-[11px] text-[#A8A29E] whitespace-nowrap hidden md:inline">
               Exibindo <strong className="text-[#D4AF37]">{filteredProducts.length}</strong>{' '}
-              {filteredProducts.length === 1 ? 'modelo' : 'modelos'}
+              {filteredProducts.length === 1 ? 'produto' : 'produtos'}
             </span>
           </div>
         )}
       </section>
 
-      {/* Grade de Modelos do Showroom Interativo */}
+      {/* Grade de Produtos */}
       {filteredProducts.length === 0 ? (
         <section className="rounded-3xl border border-[#262626] bg-[#141414] p-12 text-center space-y-4">
           <h2 className="text-2xl font-serif text-[#D4AF37]">
             {products.length === 0
-              ? 'Nova Coleção em Atualização'
-              : 'Nenhum modelo encontrado para esta combinação de filtros'}
+              ? 'Nova Coleção em Preparação'
+              : 'Nenhum produto encontrado para esta combinação de filtros'}
           </h2>
           <p className="text-xs sm:text-sm text-[#A8A29E] max-w-lg mx-auto">
             {products.length === 0
-              ? 'Nossa curadoria está preparando novidades exclusivas. Solicite atendimento personalizado pelo nosso WhatsApp Oficial.'
+              ? 'Nossa equipe está preparando novos lançamentos. Solicite atendimento direto pelo nosso WhatsApp Oficial.'
               : 'Limpe os filtros selecionados para visualizar toda a coleção disponível.'}
           </p>
           {products.length === 0 ? (
             <a
               href={`https://wa.me/${(whatsappNumber || '5527996929005').replace(/\D/g, '') || '5527996929005'}?text=${encodeURIComponent(
-                'Olá, STILLUS ALBAN! Gostaria de receber informações sobre os modelos disponíveis.'
+                'Olá, STILLUS ALBAN! Gostaria de receber informações sobre os produtos disponíveis.'
               )}`}
               target="_blank"
               rel="noopener noreferrer"
               className="min-h-[44px] inline-flex items-center px-6 py-2.5 rounded-full bg-[#D4AF37] hover:bg-[#E5C453] text-[#0A0A0A] text-xs sm:text-sm font-bold transition"
             >
-              Atendimento VIP via WhatsApp
+              Atendimento pelo WhatsApp
             </a>
           ) : (
             <button
@@ -511,7 +510,7 @@ export default function ShowroomBoutiqueCatalog({
         </section>
       ) : (
         <section
-          aria-label="Modelos do catálogo"
+          aria-label="Produtos da loja"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7"
         >
           {filteredProducts.map((product) => {

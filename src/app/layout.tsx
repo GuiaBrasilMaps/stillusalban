@@ -17,9 +17,9 @@ const fontSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'STILLUS ALBAN | Showroom & Catálogo Online — Domingos Martins, ES',
+  title: 'STILLUS ALBAN | Bolsas, Calçados & Moda Feminina — Domingos Martins, ES',
   description:
-    'Showroom Digital STILLUS ALBAN — Bolsas, calçados e acessórios em estoque próprio e sob encomenda com atendimento exclusivo em Domingos Martins e região (ES).',
+    'Loja Oficial STILLUS ALBAN — Bolsas estruturadas, calçados sofisticados e acessórios elegantes em pronta entrega e sob encomenda em Domingos Martins e Região Serrana (ES).',
 };
 
 export default function RootLayout({

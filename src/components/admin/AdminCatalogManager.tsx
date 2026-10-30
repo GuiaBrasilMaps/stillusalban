@@ -1208,11 +1208,11 @@ export default function AdminCatalogManager({
                     Cadastro de Produto
                   </span>
                   <h2 className="text-lg font-serif text-[#D4AF37] font-semibold">
-                    Dados do Modelo, Foto e Grade de Numerações
+                    Dados do Produto, Fotos e Tamanhos
                   </h2>
                 </div>
 
-                {/* Alternador Rápido: Criar Novo Modelo vs Adicionar Nova Cor a Modelo Existente */}
+                {/* Alternador Rápido: Criar Novo Produto vs Adicionar Nova Cor */}
                 <div className="inline-flex rounded-xl border border-[#262626] bg-[#0A0A0A] p-1 text-xs">
                   <button
                     type="button"
@@ -1223,7 +1223,7 @@ export default function AdminCatalogManager({
                         : 'text-[#A8A29E] hover:text-[#F5F5F4]'
                     }`}
                   >
-                    + Novo Modelo Completo
+                    + Cadastrar Novo Produto
                   </button>
                   <button
                     type="button"
@@ -1234,22 +1234,22 @@ export default function AdminCatalogManager({
                         : 'text-[#A8A29E] hover:text-[#F5F5F4]'
                     }`}
                   >
-                    + Nova Cor em Modelo Existente
+                    + Adicionar Cor a Produto Existente
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Coluna 1 (5 cols): Dados do Modelo + Custo + Markup 120% */}
+                {/* Coluna 1 (5 cols): Dados do Produto + Custo + Markup */}
                 <div className="lg:col-span-5 rounded-xl border border-[#262626] bg-[#0A0A0A] p-4 space-y-4">
                   <h3 className="text-sm font-semibold text-[#D4AF37] border-b border-[#262626] pb-2">
-                    1. Identificação do Modelo &amp; Precificação
+                    1. Identificação do Produto &amp; Precificação
                   </h3>
 
                   {studioMode === 'ADD_COLOR_TO_EXISTING' ? (
                     <div className="space-y-3">
                       <label htmlFor="var-prod" className="block text-xs text-[#A8A29E]">
-                        Selecione o Modelo já Cadastrado *
+                        Selecione o Produto já Cadastrado *
                       </label>
                       <select
                         id="var-prod"

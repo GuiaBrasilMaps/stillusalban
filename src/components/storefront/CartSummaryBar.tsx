@@ -113,13 +113,13 @@ export default function CartSummaryBar({ pixDiscountPercent }: CartSummaryBarPro
           className="rounded-lg border border-[#D4AF37]/40 bg-[#D4AF37]/10 p-3.5 text-xs text-[#F5F5F4] space-y-1"
         >
           <strong className="text-[#D4AF37] block">
-            Regra de Envio para Pedido Combinado (Estoque Próprio + Sob Encomenda):
+            Regra de Envio para Pedido Combinado (Pronta Entrega + Sob Encomenda):
           </strong>
           <p className="text-[#A8A29E]">
-            Sua sacola combina produtos em estoque próprio e sob encomenda. O envio será realizado
+            Sua sacola combina produtos em pronta entrega e sob encomenda. O envio será realizado
             em <strong className="text-[#F5F5F4]">remessa única</strong> assim que o item sob
             encomenda estiver pronto
-            {maxPrepDays > 0 ? ` (prazo de preparação: ${maxPrepDays} dia(s) útil(is))` : ''}.
+            {maxPrepDays > 0 ? ` (prazo de confecção: ${maxPrepDays} dia(s) útil(is))` : ''}.
           </p>
         </div>
       )}

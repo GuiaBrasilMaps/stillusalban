@@ -305,44 +305,52 @@ export default function ProductDetailClient({
             </div>
           </div>
 
-          {/* 2. Seletor de Modelo */}
-          <div className="space-y-2">
-            <span className="block text-xs uppercase tracking-wider text-[#A8A29E]">
-              2. Modelo:{' '}
-              <strong className="text-[#F5F5F4]">{selection.selectedModelName}</strong>
-            </span>
-            <div
-              role="radiogroup"
-              aria-label="Selecionar modelo do produto"
-              className="flex flex-wrap gap-2.5"
-            >
-              {selection.availableModelsForColor.map((modelName) => {
-                const isSelected =
-                  modelName.toLowerCase() === selection.selectedModelName.toLowerCase();
-                return (
-                  <button
-                    key={modelName}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    onClick={() => handleModelChange(modelName)}
-                    className={`min-h-[44px] px-4 py-2 rounded-lg border text-xs sm:text-sm font-medium transition cursor-pointer ${
-                      isSelected
-                        ? 'border-[#D4AF37] bg-[#D4AF37]/15 text-[#D4AF37]'
-                        : 'border-[#262626] bg-[#0A0A0A] text-[#F5F5F4] hover:border-[#C5A059]'
-                    }`}
-                  >
-                    {modelName}
-                  </button>
-                );
-              })}
+          {/* 2. Seletor de Modelo (Oculto se for apenas 'Padrão') */}
+          {!(
+            selection.availableModelsForColor.length === 1 &&
+            selection.availableModelsForColor[0] === 'Padrão'
+          ) && (
+            <div className="space-y-2">
+              <span className="block text-xs uppercase tracking-wider text-[#A8A29E]">
+                2. Variação de Estilo:{' '}
+                <strong className="text-[#F5F5F4]">{selection.selectedModelName}</strong>
+              </span>
+              <div
+                role="radiogroup"
+                aria-label="Selecionar modelo do produto"
+                className="flex flex-wrap gap-2.5"
+              >
+                {selection.availableModelsForColor.map((modelName) => {
+                  const isSelected =
+                    modelName.toLowerCase() === selection.selectedModelName.toLowerCase();
+                  return (
+                    <button
+                      key={modelName}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => handleModelChange(modelName)}
+                      className={`min-h-[44px] px-4 py-2 rounded-lg border text-xs sm:text-sm font-medium transition cursor-pointer ${
+                        isSelected
+                          ? 'border-[#D4AF37] bg-[#D4AF37]/15 text-[#D4AF37]'
+                          : 'border-[#262626] bg-[#0A0A0A] text-[#F5F5F4] hover:border-[#C5A059]'
+                      }`}
+                    >
+                      {modelName}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 3. Seletor de Tamanho (Impede combinações incompatíveis) */}
           <div className="space-y-2">
             <span className="block text-xs uppercase tracking-wider text-[#A8A29E]">
-              3. Tamanho / Numeração:{' '}
+              {selection.availableModelsForColor.length === 1 &&
+              selection.availableModelsForColor[0] === 'Padrão'
+                ? '2. Tamanho / Numeração:'
+                : '3. Tamanho / Numeração:'}{' '}
               <strong className="text-[#F5F5F4]">{selection.selectedSizeLabel}</strong>
             </span>
             <div
@@ -467,10 +475,10 @@ export default function ProductDetailClient({
           {/* Informações de Entrega e Ficha Técnica */}
           <div className="border-t border-[#262626] pt-4 space-y-3 text-xs text-[#A8A29E]">
             <div>
-              <strong className="text-[#D4AF37] block">Condições de Entrega Confirmadas:</strong>
+              <strong className="text-[#D4AF37] block">Envio &amp; Prazos de Entrega:</strong>
               <p>
                 • Envio calculado via <strong>Melhor Envio</strong> a partir de Domingos Martins/ES
-                (CEP {originCep}). Em pedidos mistos (estoque próprio + encomenda), o envio ocorre
+                (CEP {originCep}). Em pedidos mistos (pronta entrega + encomenda), o envio ocorre
                 em <strong>remessa única</strong> após a preparação do item encomendado.
               </p>
               <p className="mt-1">
@@ -481,13 +489,13 @@ export default function ProductDetailClient({
 
             {product.fullDescription && (
               <div>
-                <strong className="text-[#F5F5F4] block">Descrição Detalhada:</strong>
+                <strong className="text-[#F5F5F4] block">Detalhes do Produto:</strong>
                 <p>{product.fullDescription}</p>
               </div>
             )}
 
             <div>
-              <strong className="text-[#F5F5F4]">Especificações para Transporte:</strong> Peso{' '}
+              <strong className="text-[#F5F5F4]">Ficha Técnica &amp; Dimensões:</strong> Peso{' '}
               {product.weightKg}kg • Dimensões {product.heightCm}x{product.widthCm}x
               {product.lengthCm}cm
               {product.material ? ` • Material: ${product.material}` : ''}

@@ -48,7 +48,7 @@ export default function StoreHeader({
 
   const cleanWa = (whatsappNumber || '5527996929005').replace(/\D/g, '') || '5527996929005';
   const directWaUrl = `https://wa.me/${cleanWa}?text=${encodeURIComponent(
-    'Olá, STILLUS ALBAN! Estou visitando o Catálogo Online e gostaria de atendimento.'
+    'Olá, STILLUS ALBAN! Estou na loja online e gostaria de tirar uma dúvida.'
   )}`;
 
   return (
@@ -69,7 +69,7 @@ export default function StoreHeader({
           </span>
           <div>
             <span className="text-[10px] uppercase tracking-[0.28em] text-[#C5A059] block">
-              Showroom &amp; Catálogo Online
+              Bolsas, Calçados &amp; Acessórios
             </span>
             <span className="text-xl sm:text-2xl font-serif tracking-[0.2em] text-[#D4AF37] group-hover:text-[#E5C453] font-semibold block transition">
               {storeName}
@@ -84,7 +84,7 @@ export default function StoreHeader({
               onClick={() => window.dispatchEvent(new Event('stillus-open-interest-drawer'))}
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-[#D4AF37]/50 bg-[#141414] hover:border-[#D4AF37] text-xs text-[#F5F5F4] font-medium transition cursor-pointer shadow"
             >
-              <span className="hidden sm:inline">Minha Seleção:</span>
+              <span className="hidden sm:inline">Minha Sacola:</span>
               <strong className="px-2 py-0.5 rounded-full bg-[#D4AF37] text-[#0A0A0A] text-[11px] font-bold tabular-nums">
                 {interestCount}
               </strong>
@@ -97,7 +97,7 @@ export default function StoreHeader({
             rel="noopener noreferrer"
             className="min-h-[40px] inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#D4AF37] bg-[#D4AF37] hover:bg-[#E5C453] text-xs font-bold text-[#0A0A0A] transition shadow-[0_4px_14px_rgba(212,175,55,0.25)]"
           >
-            <span>Atendimento VIP (WhatsApp)</span>
+            <span>Atendimento pelo WhatsApp</span>
           </a>
         </div>
       </div>
