@@ -13,8 +13,12 @@ export default async function AdminPage() {
 
   const [categories, products, recentMovements, storeSettings, purchaseLists] = await Promise.all([
     prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: { displayOrder: 'asc' },
+      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
     }),
     prisma.product.findMany({
       include: {

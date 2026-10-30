@@ -13,10 +13,16 @@ export interface CategoryDTO {
   id: string;
   name: string;
   slug: string;
+  description?: string | null;
+  displayOrder?: number;
+  isActive?: boolean;
   defaultWeightKg: number;
   defaultHeightCm: number;
   defaultWidthCm: number;
   defaultLengthCm: number;
+  _count?: {
+    products: number;
+  };
 }
 
 export interface VariantDTO {
@@ -157,10 +163,24 @@ export default function AdminCatalogManager({
   initialPurchaseLists = [],
 }: Props) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'estudio' | 'pedidos_fornecedor' | 'config_estoque'>(
-    'estudio'
-  );
+  const [activeTab, setActiveTab] = useState<
+    'estudio' | 'pedidos_fornecedor' | 'config_estoque' | 'categorias'
+  >('estudio');
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  // Gestão de Categorias
+  const [categoriesList, setCategoriesList] = useState<CategoryDTO[]>(categories);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [catName, setCatName] = useState('');
+  const [catSlug, setCatSlug] = useState('');
+  const [catDesc, setCatDesc] = useState('');
+  const [catOrder, setCatOrder] = useState('0');
+  const [catIsActive, setCatIsActive] = useState(true);
+  const [catWeightKg, setCatWeightKg] = useState('0.6');
+  const [catHeightCm, setCatHeightCm] = useState('15');
+  const [catWidthCm, setCatWidthCm] = useState('25');
+  const [catLengthCm, setCatLengthCm] = useState('30');
+  const [catSubmitting, setCatSubmitting] = useState(false);
 
   // Configurações estratégicas de Markup (%), Desconto PIX (%) e Taxas Gateway Mercado Pago (%)
   const [markupPercent, setMarkupPercent] = useState<number>(initialDefaultMarkupPercent);
@@ -561,6 +581,156 @@ export default function AdminCatalogManager({
   }
 
   // ============================================================================
+  // AÇÕES: GESTÃO COMPLETA DE CATEGORIAS
+  // ============================================================================
+  async function handleSaveCategory(e: React.FormEvent) {
+    e.preventDefault();
+    setCatSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const payload = {
+        id: editingCategoryId || undefined,
+        name: catName,
+        slug: catSlug || undefined,
+        description: catDesc || null,
+        displayOrder: Number(catOrder) || 0,
+        isActive: catIsActive,
+        defaultWeightKg: Number(catWeightKg) || 0.6,
+        defaultHeightCm: Number(catHeightCm) || 15,
+        defaultWidthCm: Number(catWidthCm) || 25,
+        defaultLengthCm: Number(catLengthCm) || 30,
+      };
+
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: 'err', text: data.error || 'Erro ao salvar categoria.' });
+        return;
+      }
+
+      setFeedback({
+        type: 'ok',
+        text: editingCategoryId
+          ? `Categoria "${data.category.name}" atualizada com sucesso.`
+          : `Categoria "${data.category.name}" criada com sucesso.`,
+      });
+
+      if (editingCategoryId) {
+        setCategoriesList((prev) =>
+          prev.map((c) => (c.id === editingCategoryId ? { ...c, ...data.category } : c))
+        );
+      } else {
+        setCategoriesList((prev) => [...prev, data.category]);
+        if (!prodCategoryId) {
+          setProdCategoryId(data.category.id);
+        }
+      }
+
+      handleCancelCategoryEdit();
+      router.refresh();
+    } catch {
+      setFeedback({ type: 'err', text: 'Falha de conexão ao salvar categoria.' });
+    } finally {
+      setCatSubmitting(false);
+    }
+  }
+
+  function handleStartCategoryEdit(cat: CategoryDTO) {
+    setEditingCategoryId(cat.id);
+    setCatName(cat.name);
+    setCatSlug(cat.slug);
+    setCatDesc(cat.description || '');
+    setCatOrder(String(cat.displayOrder ?? 0));
+    setCatIsActive(cat.isActive ?? true);
+    setCatWeightKg(String(cat.defaultWeightKg));
+    setCatHeightCm(String(cat.defaultHeightCm));
+    setCatWidthCm(String(cat.defaultWidthCm));
+    setCatLengthCm(String(cat.defaultLengthCm));
+    setActiveTab('categorias');
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  }
+
+  function handleCancelCategoryEdit() {
+    setEditingCategoryId(null);
+    setCatName('');
+    setCatSlug('');
+    setCatDesc('');
+    setCatOrder('0');
+    setCatIsActive(true);
+    setCatWeightKg('0.6');
+    setCatHeightCm('15');
+    setCatWidthCm('25');
+    setCatLengthCm('30');
+  }
+
+  async function handleToggleCategoryActive(cat: CategoryDTO) {
+    setFeedback(null);
+    try {
+      const nextActive = !cat.isActive;
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+          isActive: nextActive,
+          defaultWeightKg: cat.defaultWeightKg,
+          defaultHeightCm: cat.defaultHeightCm,
+          defaultWidthCm: cat.defaultWidthCm,
+          defaultLengthCm: cat.defaultLengthCm,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: 'err', text: data.error || 'Erro ao alterar status da categoria.' });
+        return;
+      }
+      setCategoriesList((prev) =>
+        prev.map((c) => (c.id === cat.id ? { ...c, isActive: nextActive } : c))
+      );
+      setFeedback({
+        type: 'ok',
+        text: `Categoria "${cat.name}" agora está ${nextActive ? 'Ativa' : 'Inativa'} na loja.`,
+      });
+      router.refresh();
+    } catch {
+      setFeedback({ type: 'err', text: 'Erro ao conectar à API.' });
+    }
+  }
+
+  async function handleDeleteCategory(cat: CategoryDTO) {
+    if (!confirm(`Deseja realmente excluir ou desativar a categoria "${cat.name}"?`)) return;
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(cat.id)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: 'err', text: data.error || 'Erro ao excluir categoria.' });
+        return;
+      }
+      if (data.category) {
+        setCategoriesList((prev) =>
+          prev.map((c) => (c.id === cat.id ? { ...c, isActive: false } : c))
+        );
+      } else {
+        setCategoriesList((prev) => prev.filter((c) => c.id !== cat.id));
+      }
+      setFeedback({ type: 'ok', text: data.message });
+      router.refresh();
+    } catch {
+      setFeedback({ type: 'err', text: 'Erro ao conectar à API.' });
+    }
+  }
+
+  // ============================================================================
   // AÇÕES DO MÓDULO 4: LISTAS DE PEDIDOS AO FORNECEDOR & CONFIGURAÇÃO MARKUP
   // ============================================================================
   async function handleSaveMarkupSettings(e: React.FormEvent) {
@@ -933,6 +1103,18 @@ export default function AdminCatalogManager({
           >
             3. Configurações &amp; Estoque
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('categorias')}
+            className={`min-h-[44px] px-5 py-2.5 rounded-lg text-sm font-semibold transition cursor-pointer ${
+              activeTab === 'categorias'
+                ? 'bg-[#D4AF37] text-[#0A0A0A]'
+                : 'bg-[#141414] text-[#F5F5F4] border border-[#262626]'
+            }`}
+          >
+            4. Categorias &amp; Frete ({categoriesList.length})
+          </button>
         </div>
 
         {feedback && (
@@ -1094,14 +1276,26 @@ export default function AdminCatalogManager({
                     <>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label htmlFor="prod-cat" className="block text-xs text-[#A8A29E] mb-1">
-                            Categoria *
-                          </label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label htmlFor="prod-cat" className="block text-xs text-[#A8A29E]">
+                              Categoria *
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleCancelCategoryEdit();
+                                setActiveTab('categorias');
+                              }}
+                              className="text-[11px] text-[#D4AF37] hover:underline cursor-pointer"
+                            >
+                              + Criar Categoria
+                            </button>
+                          </div>
                           <select
                             id="prod-cat"
                             value={prodCategoryId}
                             onChange={(e) => {
-                              const cat = categories.find((c) => c.id === e.target.value);
+                              const cat = categoriesList.find((c) => c.id === e.target.value);
                               setProdCategoryId(e.target.value);
                               if (cat) {
                                 setProdWeightKg(String(cat.defaultWeightKg));
@@ -1112,9 +1306,9 @@ export default function AdminCatalogManager({
                             }}
                             className="w-full min-h-[40px] rounded border border-[#262626] bg-[#141414] px-3 text-xs"
                           >
-                            {categories.map((c) => (
+                            {categoriesList.map((c) => (
                               <option key={c.id} value={c.id}>
-                                {c.name}
+                                {c.name} {c.isActive === false ? '(Inativa)' : ''}
                               </option>
                             ))}
                           </select>
@@ -2250,6 +2444,315 @@ export default function AdminCatalogManager({
                 )}
               </section>
             </div>
+          </div>
+        )}
+
+        {/* ============================================================================ */}
+        {/* ABA 4: GESTÃO DE CATEGORIAS & MEDIDAS DE FRETE (MELHOR ENVIO)                */}
+        {/* ============================================================================ */}
+        {activeTab === 'categorias' && (
+          <div className="space-y-8">
+            {/* Formulário de Criação / Edição de Categoria */}
+            <section className="rounded-2xl border border-[#D4AF37]/40 bg-[#141414] p-6 space-y-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#262626] pb-3">
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-[#C5A059] font-semibold">
+                    Linhas de Produtos &amp; Logística
+                  </span>
+                  <h2 className="text-lg font-serif text-[#D4AF37] font-semibold">
+                    {editingCategoryId ? 'Editar Categoria Existente' : 'Cadastrar Nova Categoria'}
+                  </h2>
+                </div>
+                {editingCategoryId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelCategoryEdit}
+                    className="text-xs text-[#A8A29E] hover:text-[#F5F5F4] underline cursor-pointer"
+                  >
+                    Cancelar Edição
+                  </button>
+                )}
+              </div>
+
+              <form onSubmit={handleSaveCategory} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="lg:col-span-2">
+                    <label htmlFor="cat-name" className="block text-xs text-[#A8A29E] mb-1">
+                      Nome da Categoria *
+                    </label>
+                    <input
+                      id="cat-name"
+                      type="text"
+                      required
+                      value={catName}
+                      onChange={(e) => {
+                        setCatName(e.target.value);
+                        if (!editingCategoryId) {
+                          setCatSlug(slugifyText(e.target.value));
+                        }
+                      }}
+                      placeholder="Ex: Sandálias Salto Bloco, Bolsas Tiracolo, Cintos"
+                      className="w-full min-h-[42px] rounded-lg border border-[#262626] bg-[#0A0A0A] px-3.5 text-sm text-[#F5F5F4] focus:border-[#D4AF37]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="cat-slug" className="block text-xs text-[#A8A29E] mb-1">
+                      Identificador / Slug (URL amigável) *
+                    </label>
+                    <input
+                      id="cat-slug"
+                      type="text"
+                      required
+                      value={catSlug}
+                      onChange={(e) => setCatSlug(slugifyText(e.target.value))}
+                      placeholder="sandalias-salto-bloco"
+                      className="w-full min-h-[42px] rounded-lg border border-[#262626] bg-[#0A0A0A] px-3 text-sm text-[#D4AF37] font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="cat-order" className="block text-xs text-[#A8A29E] mb-1">
+                      Ordem no Menu (0, 1, 2...)
+                    </label>
+                    <input
+                      id="cat-order"
+                      type="number"
+                      min="0"
+                      value={catOrder}
+                      onChange={(e) => setCatOrder(e.target.value)}
+                      className="w-full min-h-[42px] rounded-lg border border-[#262626] bg-[#0A0A0A] px-3 text-sm text-[#F5F5F4]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <label htmlFor="cat-desc" className="block text-xs text-[#A8A29E] mb-1">
+                      Descrição da Linha (Exibida na loja / SEO - opcional)
+                    </label>
+                    <input
+                      id="cat-desc"
+                      type="text"
+                      value={catDesc}
+                      onChange={(e) => setCatDesc(e.target.value)}
+                      placeholder="Ex: Calçados elegantes com conforto térmico e design atemporal."
+                      className="w-full min-h-[42px] rounded-lg border border-[#262626] bg-[#0A0A0A] px-3.5 text-sm text-[#F5F5F4]"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-6">
+                    <input
+                      id="cat-active"
+                      type="checkbox"
+                      checked={catIsActive}
+                      onChange={(e) => setCatIsActive(e.target.checked)}
+                      className="w-4 h-4 rounded border-[#262626] text-[#D4AF37] accent-[#D4AF37] cursor-pointer"
+                    />
+                    <label htmlFor="cat-active" className="text-sm text-[#F5F5F4] cursor-pointer">
+                      Categoria Ativa e Visível na Loja
+                    </label>
+                  </div>
+                </div>
+
+                {/* Bloco de Dimensões Padrão de Frete para Melhor Envio */}
+                <div className="rounded-xl border border-[#262626] bg-[#0A0A0A] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase tracking-wider text-[#D4AF37] font-semibold">
+                      📦 Dimensões Padrão de Envio (Melhor Envio &amp; Correios)
+                    </span>
+                    <span className="text-[11px] text-[#A8A29E]">
+                      Valores herdados automaticamente ao cadastrar um novo produto desta categoria.
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <label htmlFor="cat-weight" className="block text-[#A8A29E] mb-1">
+                        Peso Médio (kg) *
+                      </label>
+                      <input
+                        id="cat-weight"
+                        type="number"
+                        step="0.05"
+                        min="0.1"
+                        required
+                        value={catWeightKg}
+                        onChange={(e) => setCatWeightKg(e.target.value)}
+                        className="w-full min-h-[38px] rounded border border-[#262626] bg-[#141414] px-2.5 text-xs text-[#F5F5F4]"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="cat-height" className="block text-[#A8A29E] mb-1">
+                        Altura (cm) *
+                      </label>
+                      <input
+                        id="cat-height"
+                        type="number"
+                        min="1"
+                        required
+                        value={catHeightCm}
+                        onChange={(e) => setCatHeightCm(e.target.value)}
+                        className="w-full min-h-[38px] rounded border border-[#262626] bg-[#141414] px-2.5 text-xs text-[#F5F5F4]"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="cat-width" className="block text-[#A8A29E] mb-1">
+                        Largura (cm) *
+                      </label>
+                      <input
+                        id="cat-width"
+                        type="number"
+                        min="5"
+                        required
+                        value={catWidthCm}
+                        onChange={(e) => setCatWidthCm(e.target.value)}
+                        className="w-full min-h-[38px] rounded border border-[#262626] bg-[#141414] px-2.5 text-xs text-[#F5F5F4]"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="cat-length" className="block text-[#A8A29E] mb-1">
+                        Comprimento (cm) *
+                      </label>
+                      <input
+                        id="cat-length"
+                        type="number"
+                        min="5"
+                        required
+                        value={catLengthCm}
+                        onChange={(e) => setCatLengthCm(e.target.value)}
+                        className="w-full min-h-[38px] rounded border border-[#262626] bg-[#141414] px-2.5 text-xs text-[#F5F5F4]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="submit"
+                    disabled={catSubmitting}
+                    className="min-h-[44px] px-6 py-2.5 rounded-lg bg-[#D4AF37] hover:bg-[#E5C453] text-[#0A0A0A] font-bold text-sm transition cursor-pointer disabled:opacity-50"
+                  >
+                    {catSubmitting
+                      ? 'Salvando...'
+                      : editingCategoryId
+                      ? 'Atualizar Categoria'
+                      : 'Salvar Nova Categoria'}
+                  </button>
+
+                  {editingCategoryId && (
+                    <button
+                      type="button"
+                      onClick={handleCancelCategoryEdit}
+                      className="min-h-[44px] px-4 py-2 rounded-lg border border-[#262626] bg-[#0A0A0A] hover:bg-[#262626] text-xs text-[#F5F5F4] cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </form>
+            </section>
+
+            {/* Listagem de Categorias Cadastradas */}
+            <section className="rounded-xl border border-[#262626] bg-[#141414] p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#262626] pb-3">
+                <h3 className="text-base font-semibold text-[#D4AF37]">
+                  Categorias Cadastradas ({categoriesList.length})
+                </h3>
+                <span className="text-xs text-[#A8A29E]">
+                  Itens ativos aparecem no menu de navegação e filtros da vitrine.
+                </span>
+              </div>
+
+              {categoriesList.length === 0 ? (
+                <p className="text-sm text-[#A8A29E]">Nenhuma categoria cadastrada ainda.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#262626] text-[#A8A29E]">
+                        <th className="py-2.5 pr-3">Ordem</th>
+                        <th className="py-2.5 pr-3">Nome / Slug</th>
+                        <th className="py-2.5 pr-3">Dimensões Padrão de Frete</th>
+                        <th className="py-2.5 pr-3">Produtos Vinculados</th>
+                        <th className="py-2.5 pr-3">Status</th>
+                        <th className="py-2.5 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#262626]">
+                      {categoriesList.map((cat) => (
+                        <tr key={cat.id} className="hover:bg-[#0A0A0A]/50 transition">
+                          <td className="py-3 pr-3 text-[#A8A29E] font-mono">
+                            #{cat.displayOrder ?? 0}
+                          </td>
+                          <td className="py-3 pr-3">
+                            <strong className="text-sm text-[#F5F5F4] block font-serif">
+                              {cat.name}
+                            </strong>
+                            <span className="text-[11px] text-[#A8A29E] font-mono">
+                              /{cat.slug}
+                            </span>
+                            {cat.description && (
+                              <p className="text-[11px] text-[#A8A29E] mt-0.5 line-clamp-1">
+                                {cat.description}
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-3 pr-3 text-[#A8A29E]">
+                            <span className="text-[#F5F5F4] font-medium">
+                              {cat.defaultWeightKg} kg
+                            </span>{' '}
+                            • {cat.defaultHeightCm}x{cat.defaultWidthCm}x{cat.defaultLengthCm} cm
+                          </td>
+                          <td className="py-3 pr-3">
+                            <span className="px-2 py-0.5 rounded bg-[#262626] text-[#F5F5F4] font-semibold text-[11px]">
+                              {cat._count?.products ?? 0} produtos
+                            </span>
+                          </td>
+                          <td className="py-3 pr-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                cat.isActive !== false
+                                  ? 'bg-[#10B981]/20 text-[#10B981]'
+                                  : 'bg-[#EF4444]/20 text-[#EF4444]'
+                              }`}
+                            >
+                              {cat.isActive !== false ? 'Ativa na Loja' : 'Oculta (Inativa)'}
+                            </span>
+                          </td>
+                          <td className="py-3 text-right space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => handleStartCategoryEdit(cat)}
+                              className="px-2.5 py-1 rounded border border-[#D4AF37]/40 bg-[#D4AF37]/10 text-xs text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A0A0A] font-semibold cursor-pointer transition"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCategoryActive(cat)}
+                              className="px-2.5 py-1 rounded border border-[#262626] bg-[#0A0A0A] hover:border-[#D4AF37] text-xs text-[#F5F5F4] cursor-pointer"
+                            >
+                              {cat.isActive !== false ? 'Desativar' : 'Ativar'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(cat)}
+                              className="px-2.5 py-1 rounded border border-[#EF4444]/40 bg-[#EF4444]/10 hover:bg-[#EF4444] text-xs text-[#EF4444] hover:text-white cursor-pointer transition"
+                            >
+                              Excluir
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
         )}
       </main>

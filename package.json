@@ -19,7 +19,8 @@
     "test:stage5": "tsx tests/stage5-orders-payments-whatsapp.test.ts",
     "test:stage6": "tsx tests/stage6-e2e-security-readiness.test.ts",
     "test:gateway": "tsx tests/mercadopago-gateway-fees.test.ts",
-    "test": "tsx tests/stage1-foundation.test.ts && tsx tests/stage2-catalog-inventory.test.ts && tsx tests/stage3-storefront-variations.test.ts && tsx tests/stage4-shipping-checkout.test.ts && tsx tests/stage5-orders-payments-whatsapp.test.ts && tsx tests/stage6-e2e-security-readiness.test.ts && tsx tests/mercadopago-gateway-fees.test.ts"
+    "test:categories": "tsx tests/categories-management.test.ts",
+    "test": "tsx tests/stage1-foundation.test.ts && tsx tests/stage2-catalog-inventory.test.ts && tsx tests/stage3-storefront-variations.test.ts && tsx tests/stage4-shipping-checkout.test.ts && tsx tests/stage5-orders-payments-whatsapp.test.ts && tsx tests/stage6-e2e-security-readiness.test.ts && tsx tests/mercadopago-gateway-fees.test.ts && tsx tests/categories-management.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
